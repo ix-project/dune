@@ -183,7 +183,6 @@
 
 .globl __dune_enter
 __dune_enter:
-	pushfq
 	subq	$REG_END, %rsp
 	SAVE_REGS 1, 0
 	SAVE_REST
@@ -230,7 +229,6 @@ __dune_ret_fail:
 	RESTORE_REST
 	RESTORE_REGS 1, 0
 	addq	$REG_END, %rsp
-	popfq
 	retq
 
 .globl __dune_go_linux
