@@ -176,6 +176,8 @@ extern uintptr_t phys_limit;
 extern uintptr_t mmap_base;
 extern uintptr_t stack_base;
 
+#define APIC_BASE 0xfffffffffffff000
+
 static inline uintptr_t dune_mmap_addr_to_pa(void *ptr)
 {
 	return ((uintptr_t) ptr) - mmap_base +
@@ -190,7 +192,9 @@ static inline uintptr_t dune_stack_addr_to_pa(void *ptr)
 
 static inline uintptr_t dune_va_to_pa(void *ptr)
 {
-	if ((uintptr_t) ptr >= stack_base)
+	if (PGADDR(ptr) == APIC_BASE)
+		return GPA_APIC_PAGE;
+	else if ((uintptr_t) ptr >= stack_base)
 		return dune_stack_addr_to_pa(ptr);
 	else if ((uintptr_t) ptr >= mmap_base)
 		return dune_mmap_addr_to_pa(ptr);
