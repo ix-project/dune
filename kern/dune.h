@@ -20,6 +20,7 @@
 #define DUNE_GET_LAYOUT	_IOW(DUNE_MINOR, 0x03, struct dune_layout)
 #define DUNE_TRAP_ENABLE _IOR(DUNE_MINOR, 0x04, struct dune_trap_config)
 #define DUNE_TRAP_DISABLE _IO(DUNE_MINOR, 0x05)
+#define DUNE_TLB_SHOOTDOWN _IO(DUNE_MINOR, 0x06)
 
 // XXX: Must match libdune/dune.h
 #define DUNE_SIGNAL_INTR_BASE 200

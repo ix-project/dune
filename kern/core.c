@@ -65,6 +65,11 @@ static int dune_enter(struct dune_config *conf, int64_t *ret)
 	return vmx_launch(conf, ret);
 }
 
+static void flush_guest_tlb(void *info)
+{
+	vpid_sync_vcpu_global();
+}
+
 static long dune_dev_ioctl(struct file *filp,
 			  unsigned int ioctl, unsigned long arg)
 {
@@ -116,6 +121,10 @@ static long dune_dev_ioctl(struct file *filp,
 
 	case DUNE_TRAP_DISABLE:
 		r = dune_trap_disable(arg);
+		break;
+
+	case DUNE_TLB_SHOOTDOWN:
+		r = on_each_cpu(flush_guest_tlb, NULL, 1);
 		break;
 
 	default:
