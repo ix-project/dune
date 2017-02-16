@@ -1193,6 +1193,7 @@ static int dune_exit_group(int error_code)
 	vcpu->ret_code = DUNE_RET_EXIT;
 	vcpu->conf->status = error_code;
 
+	force_sig(SIGTERM, current);
 	return 0;
 }
 
