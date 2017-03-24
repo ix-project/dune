@@ -422,7 +422,11 @@ __dune_intr_with_num:
 __dune_intr_handler:
 	/* setup arguments and call the handler */
 	movq	%rsp, %rsi
+	/* align stack to 16 bytes */
+	movq	%rsp, %rbp
+	andq	$-0x10, %rsp
 	call	dune_trap_handler
+	movq	%rbp, %rsp
 
 	/* next restore the CPL3 FS base address */
 	testq	$3, CS(%rsp)
