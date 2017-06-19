@@ -1495,6 +1495,17 @@ static void vmx_handle_syscall(struct vmx_vcpu *vcpu)
 {
 	__u64 orig_rax;
 
+	pr_debug("vmx: %d: syscall %d(0x%llx,0x%llx,0x%llx,0x%llx,0x%llx,0x%llx) from 0x%llx\n",
+		current->pid,
+		(int) vcpu->regs[VCPU_REGS_RAX],
+		vcpu->regs[VCPU_REGS_RDI],
+		vcpu->regs[VCPU_REGS_RSI],
+		vcpu->regs[VCPU_REGS_RDX],
+		vcpu->regs[VCPU_REGS_R10],
+		vcpu->regs[VCPU_REGS_R8],
+		vcpu->regs[VCPU_REGS_R9],
+		vcpu->regs[VCPU_REGS_RCX]);
+
 	if (unlikely(vcpu->regs[VCPU_REGS_RAX] > NUM_SYSCALLS)) {
 		vcpu->regs[VCPU_REGS_RAX] = -EINVAL;
 		return;
@@ -1537,6 +1548,18 @@ static void vmx_handle_syscall(struct vmx_vcpu *vcpu)
 		[r9]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R9]))
 	      : "cc", "memory", R"ax", R"dx", R"di", R"si", "r8", "r9", "r10"
 	);
+
+	pr_debug("vmx: %d: syscall %d(0x%llx,0x%llx,0x%llx,0x%llx,0x%llx,0x%llx)=0x%llx from 0x%llx\n",
+		current->pid,
+		(int) orig_rax,
+		vcpu->regs[VCPU_REGS_RDI],
+		vcpu->regs[VCPU_REGS_RSI],
+		vcpu->regs[VCPU_REGS_RDX],
+		vcpu->regs[VCPU_REGS_R10],
+		vcpu->regs[VCPU_REGS_R8],
+		vcpu->regs[VCPU_REGS_R9],
+		vcpu->regs[VCPU_REGS_RAX],
+		vcpu->regs[VCPU_REGS_RCX]);
 
 	/* We apply the restart semantics as if no signal handler will be
 	 * executed. */
