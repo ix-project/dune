@@ -202,16 +202,14 @@ static void setup_idt(void)
 		memset(id, 0, sizeof(*id));
                 
 		id->selector = GD_KT;
-		id->type     = IDTD_P | IDTD_TRAP_GATE;
+		/* We must use interrupts gates otherwise nested interrupts will
+		 * corrupt the alternative stack. */
+		id->type     = IDTD_P | IDTD_INTERRUPT_GATE;
+		id->ist	     = 1;
 
 		switch (i) {
 		case T_BRKPT:
 			id->type |= IDTD_CPL3;
-			/* fallthrough */
-		case T_DBLFLT:
-		case T_NMI:
-		case T_MCHK:
-			id->ist = 1;
 			break;
 		}
 
