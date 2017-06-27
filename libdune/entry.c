@@ -95,20 +95,22 @@ static void map_ptr(void *p, int len)
 			 PERM_R | PERM_W);
 }
 
+#define SAFE_STACK_SIZE (2048 * 1024)
+
 static int setup_safe_stack(struct dune_percpu *percpu)
 {
 	int i;
 	char *safe_stack;
 
-	safe_stack = mmap(NULL, PGSIZE, PROT_READ | PROT_WRITE,
-                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	safe_stack = mmap(NULL, SAFE_STACK_SIZE, PROT_READ | PROT_WRITE,
+                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
 
 	if (safe_stack == MAP_FAILED)
 		return -ENOMEM;
 
-	map_ptr(safe_stack, PGSIZE);
+	map_ptr(safe_stack, SAFE_STACK_SIZE);
 
-	safe_stack += PGSIZE;
+	safe_stack += SAFE_STACK_SIZE;
 	percpu->tss.tss_iomb = offsetof(struct Tss, tss_iopb);
 
 	for (i = 1; i < 8; i++)
