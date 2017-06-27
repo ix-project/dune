@@ -163,6 +163,10 @@ void dune_trap_handler(int num, struct dune_tf *tf)
 		dune_die();
 		break;
 
+	case 32 ... 255:
+		asm("vmcall": : "a" (VMCALL_INTERRUPT));
+		break;
+
 	default:
 		dune_printf("unhandled exception %d\n", num);
 		dune_dump_trap_frame(tf);

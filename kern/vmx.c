@@ -1617,6 +1617,9 @@ static void vmx_handle_vmcall(struct vmx_vcpu *vcpu)
 			       "vmx: control guest interrupts failed (%d)\n",
 			       ret);
 		break;
+	case VMCALL_INTERRUPT:
+		/* handled in vmx_launch */
+		break;
 	default:
 		printk(KERN_WARNING "vmx: unknown vmcall 0x%x\n", vmcall);
 		break;
@@ -1651,6 +1654,48 @@ static int vmx_handle_nmi_exception(struct vmx_vcpu *vcpu)
 	vcpu->ret_code = DUNE_RET_INTERRUPT;
 	vcpu->conf->status = intr_info & INTR_INFO_VECTOR_MASK;
 	return -EIO;
+}
+
+static void inject_interrupt(int vector)
+{
+#define CASE(i) case i: asm("int $" # i); break;
+#define CASE8(i) CASE(i+0) CASE(i+1) CASE(i+2) CASE(i+3) CASE(i+4) CASE(i+5) \
+		 CASE(i+6) CASE(i+7)
+#define CASE32(i) CASE8(i+0) CASE8(i+8) CASE8(i+16) CASE8(i+24)
+
+	switch (vector) {
+	CASE32(32)
+	CASE32(64)
+	CASE32(96)
+	CASE32(128)
+	CASE32(160)
+	CASE32(192)
+	CASE32(224)
+
+	default:
+		printk(KERN_WARNING "vmx: won't inject interrupt %d\n", vector);
+		break;
+	}
+
+#undef CASE
+#undef CASE8
+#undef CASE32
+}
+
+static void vmx_handle_interrupts(int ret, struct vmx_vcpu *vcpu)
+{
+	int i, j;
+	u32 v;
+
+	for (i = 7; i >= 0; i--) {
+		v = apic_read(APIC_ISR + i * 16);
+		if (!v)
+			continue;
+
+		for (j = 31; j >= 0; j--)
+			if (v & (1 << j))
+				inject_interrupt(i * 32 + j);
+	}
 }
 
 /**
@@ -1709,6 +1754,8 @@ int vmx_launch(struct dune_config *conf, int64_t *ret_code)
 		    (exit_intr_info & INTR_INFO_VALID_MASK)) {
 			asm("int $2");
 		}
+
+		vmx_handle_interrupts(ret, vcpu);
 
 		local_irq_enable();
 
