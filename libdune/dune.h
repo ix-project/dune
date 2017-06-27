@@ -350,3 +350,5 @@ static inline int dune_init_and_enter(void)
 	
 	return dune_enter();
 }
+
+extern void dune_control_guest_ints(bool enable);

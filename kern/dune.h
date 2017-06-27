@@ -126,3 +126,4 @@ struct dune_trap_config {
 #define DUNE_RET_NOENTER 6
 
 #define VMCALL_START 0x1000
+#define VMCALL_CONTROL_GUEST_INTS 0x1000

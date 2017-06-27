@@ -308,8 +308,8 @@ static void vmcs_write64(unsigned long field, u64 value)
 #endif
 }
 
-static __init int adjust_vmx_controls(u32 ctl_min, u32 ctl_opt,
-				      u32 msr, u32 *result)
+static int adjust_vmx_controls(u32 ctl_min, u32 ctl_opt,
+			       u32 msr, u32 *result)
 {
 	u32 vmx_msr_low, vmx_msr_high;
 	u32 ctl = ctl_min | ctl_opt;
@@ -1581,12 +1581,42 @@ static void vmx_handle_syscall(struct vmx_vcpu *vcpu)
 	}
 }
 
+static int vmx_control_guest_ints(struct vmx_vcpu *vcpu, int enable)
+{
+	u32 min;
+	u32 opt;
+	u32 pin_based_exec_ctrl;
+
+	min = PIN_BASED_NMI_EXITING;
+	opt = PIN_BASED_VIRTUAL_NMIS;
+
+	if (!enable)
+		min |= PIN_BASED_EXT_INTR_MASK;
+
+	if (adjust_vmx_controls(min, opt, MSR_IA32_VMX_PINBASED_CTLS,
+				&pin_based_exec_ctrl) < 0)
+		return -EIO;
+
+	vmx_get_cpu(vcpu);
+	vmcs_write32(PIN_BASED_VM_EXEC_CONTROL, pin_based_exec_ctrl);
+	vmx_put_cpu(vcpu);
+
+	return 0;
+}
+
 static void vmx_handle_vmcall(struct vmx_vcpu *vcpu)
 {
 	int ret;
 	int vmcall = vcpu->regs[VCPU_REGS_RAX];
 
 	switch (vmcall) {
+	case VMCALL_CONTROL_GUEST_INTS:
+		ret = vmx_control_guest_ints(vcpu, vcpu->regs[VCPU_REGS_RBX]);
+		if (ret)
+			printk(KERN_WARNING
+			       "vmx: control guest interrupts failed (%d)\n",
+			       ret);
+		break;
 	default:
 		printk(KERN_WARNING "vmx: unknown vmcall 0x%x\n", vmcall);
 		break;

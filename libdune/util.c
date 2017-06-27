@@ -109,3 +109,8 @@ sighandler_t dune_signal(int sig, sighandler_t cb)
 
 	return NULL;
 }
+
+void dune_control_guest_ints(bool enable)
+{
+	asm("vmcall" : : "a" (VMCALL_CONTROL_GUEST_INTS), "b" (enable));
+}
