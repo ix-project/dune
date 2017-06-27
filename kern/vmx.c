@@ -1581,6 +1581,18 @@ static void vmx_handle_syscall(struct vmx_vcpu *vcpu)
 	}
 }
 
+static void vmx_handle_vmcall(struct vmx_vcpu *vcpu)
+{
+	int ret;
+	int vmcall = vcpu->regs[VCPU_REGS_RAX];
+
+	switch (vmcall) {
+	default:
+		printk(KERN_WARNING "vmx: unknown vmcall 0x%x\n", vmcall);
+		break;
+	}
+}
+
 static void vmx_handle_cpuid(struct vmx_vcpu *vcpu)
 {
 	unsigned int eax, ebx, ecx, edx;
@@ -1677,8 +1689,11 @@ int vmx_launch(struct dune_config *conf, int64_t *ret_code)
 
 		vmx_put_cpu(vcpu);
 
-		if (ret == EXIT_REASON_VMCALL)
+		if (ret == EXIT_REASON_VMCALL &&
+		    vcpu->regs[VCPU_REGS_RAX] < VMCALL_START)
 			vmx_handle_syscall(vcpu);
+		else if (ret == EXIT_REASON_VMCALL)
+			vmx_handle_vmcall(vcpu);
 		else if (ret == EXIT_REASON_CPUID)
 			vmx_handle_cpuid(vcpu);
 		else if (ret == EXIT_REASON_EPT_VIOLATION)

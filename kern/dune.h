@@ -124,3 +124,5 @@ struct dune_trap_config {
 #define DUNE_RET_SIGNAL 4
 #define DUNE_RET_UNHANDLED_VMEXIT 5
 #define DUNE_RET_NOENTER 6
+
+#define VMCALL_START 0x1000
