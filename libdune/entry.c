@@ -96,28 +96,33 @@ static void map_ptr(void *p, int len)
 }
 
 #define SAFE_STACK_SIZE (2048 * 1024)
+#define SAFE_STACKS 2 /* Must be less than 8 */
 
 static int setup_safe_stack(struct dune_percpu *percpu)
 {
 	int i;
-	char *safe_stack;
+	char *safe_stack[SAFE_STACKS];
 
-	safe_stack = mmap(NULL, SAFE_STACK_SIZE, PROT_READ | PROT_WRITE,
-                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
+	for (i = 0; i < SAFE_STACKS; i++) {
+		safe_stack[i] = mmap(NULL, SAFE_STACK_SIZE, PROT_READ | PROT_WRITE,
+				  MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
 
-	if (safe_stack == MAP_FAILED)
-		return -ENOMEM;
+		if (safe_stack[i] == MAP_FAILED)
+			return -ENOMEM;
 
-	map_ptr(safe_stack, SAFE_STACK_SIZE);
+		map_ptr(safe_stack[i], SAFE_STACK_SIZE);
 
-	safe_stack += SAFE_STACK_SIZE;
+		safe_stack[i] += SAFE_STACK_SIZE;
+	}
+
 	percpu->tss.tss_iomb = offsetof(struct Tss, tss_iopb);
 
-	for (i = 1; i < 8; i++)
-		percpu->tss.tss_ist[i] = (uintptr_t) safe_stack;
+	/* Note: tss_ist[0] is ignored */
+	for (i = 0; i < SAFE_STACKS; i++)
+		percpu->tss.tss_ist[i + 1] = (uintptr_t) safe_stack[i];
 
 	/* changed later on jump to G3 */
-	percpu->tss.tss_rsp[0] = (uintptr_t) safe_stack;
+	percpu->tss.tss_rsp[0] = (uintptr_t) safe_stack[0];
 
 	return 0;
 }
@@ -210,6 +215,12 @@ static void setup_idt(void)
 		id->ist	     = 1;
 
 		switch (i) {
+		case T_PGFLT:
+			/* We muse use another alternative stack otherwise a
+			 * page fault that occurs during interrupt processing
+			 * will corrupt the stack. */
+			id->ist = 2;
+			break;
 		case T_BRKPT:
 			id->type |= IDTD_CPL3;
 			break;
