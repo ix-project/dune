@@ -706,6 +706,8 @@ void vmx_ept_sync_individual_addr(struct vmx_vcpu *vcpu, gpa_t gpa)
 
 #define STACK_DEPTH 12
 
+static DEFINE_SPINLOCK(vmx_dump_cpu_lock);
+
 /**
  * vmx_dump_cpu - prints the CPU state
  * @vcpu: VCPU to print
@@ -715,6 +717,8 @@ static void vmx_dump_cpu(struct vmx_vcpu *vcpu)
 	unsigned long flags;
 	int i;
 	unsigned long *sp, val;
+
+	spin_lock(&vmx_dump_cpu_lock);
 
 	vmx_get_cpu(vcpu);
 	vcpu->regs[VCPU_REGS_RIP] = vmcs_readl(GUEST_RIP);
@@ -754,6 +758,8 @@ static void vmx_dump_cpu(struct vmx_vcpu *vcpu)
 				i * sizeof(long), val);
 
 	printk(KERN_INFO "vmx: --- End VCPU Dump ---\n");
+
+	spin_unlock(&vmx_dump_cpu_lock);
 }
 
 static u64 construct_eptp(unsigned long root_hpa)
