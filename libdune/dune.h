@@ -4,8 +4,12 @@
 
 #pragma once
 
+#include <sys/ioctl.h>
 #include <sys/queue.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 #include "mmu.h"
 #include "elf.h"
@@ -232,6 +236,28 @@ static inline void dune_flush_tlb(void)
 {
 	asm ("mov %%cr3, %%rax\n"
 	     "mov %%rax, %%cr3\n" ::: "rax");
+}
+
+static inline int dune_tlb_shootdown(void)
+{
+	int dune_fd = -1;
+	long err = 0;
+
+	dune_fd = open("/dev/dune", O_RDWR);
+	if (dune_fd <= 0) {
+		dune_printf("dune: failed to open Dune device\n");
+		return -errno;
+	}
+
+	err = ioctl(dune_fd, DUNE_TLB_SHOOTDOWN);
+	if (err) {
+		dune_printf("TLB shootdown failed: %ld\n", err);
+		close(dune_fd);
+		return -errno;
+	}
+
+	close(dune_fd);
+	return 0;
 }
 
 #define CR3_NOFLUSH	(1UL << 63)
