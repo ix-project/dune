@@ -52,10 +52,12 @@
 #include <linux/syscalls.h>
 #include <linux/version.h>
 
+#include <asm/cpufeatures.h>
 #include <asm/desc.h>
 #include <asm/vmx.h>
 #include <asm/unistd_64.h>
 #include <asm/virtext.h>
+#include <asm/processor.h>
 #include <asm/traps.h>
 
 #include "dune.h"
@@ -867,25 +869,32 @@ static void vmx_setup_initial_guest_state(struct dune_config *conf)
 
 static void setup_perf_msrs(struct vmx_vcpu *vcpu)
 {
-	int nr_msrs, i;
+	int nr_msrs, used_msrs, i;
 	struct perf_guest_switch_msr *msrs;
 	struct vmx_msr_entry *e;
 
 	msrs = perf_guest_get_msrs(&nr_msrs);
 
-	vcpu->msr_autoload.nr = nr_msrs;
+	used_msrs = 0;
+	for (i = 0; i < nr_msrs; i++) {
+		if (msrs[i].msr == MSR_IA32_PEBS_ENABLE &&
+		    cpu_has(&boot_cpu_data, X86_FEATURE_HYPERVISOR)) {
+			/* PEBS makes us crash in a nested VM case */
+			continue;
+		}
+		e = &vcpu->msr_autoload.host[used_msrs];
+		e->index = msrs[i].msr;
+		e->value = msrs[i].host;
+		e = &vcpu->msr_autoload.guest[used_msrs];
+		e->index = msrs[i].msr;
+		e->value = msrs[i].guest;
+		used_msrs++;
+	}
+
+	vcpu->msr_autoload.nr = used_msrs;
 
 	vmcs_write32(VM_EXIT_MSR_LOAD_COUNT, vcpu->msr_autoload.nr);
 	vmcs_write32(VM_ENTRY_MSR_LOAD_COUNT, vcpu->msr_autoload.nr);
-
-	for (i = 0; i < nr_msrs; i++) {
-		e = &vcpu->msr_autoload.host[i];
-		e->index = msrs[i].msr;
-		e->value = msrs[i].host;
-		e = &vcpu->msr_autoload.guest[i];
-		e->index = msrs[i].msr;
-		e->value = msrs[i].guest;
-	}
 }
 
 static void __vmx_disable_intercept_for_msr(unsigned long *msr_bitmap, u32 msr)
