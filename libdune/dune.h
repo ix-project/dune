@@ -361,6 +361,6 @@ static inline int dune_init_and_enter(void)
 
 extern void dune_control_guest_ints(bool enable);
 
- #ifdef __cplusplus
- }
- #endif
+#ifdef __cplusplus
+}
+#endif
